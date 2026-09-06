@@ -1,11 +1,9 @@
-﻿
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace My_Study_App.Models
 {
-    public class AccountViewModels
+    public class RegisterViewModel
     {
-
         [Required]
         [MaxLength(50)]
         public string Username { get; set; }
@@ -16,20 +14,24 @@ namespace My_Study_App.Models
 
         [Required]
         [DataType(DataType.Password)]
-        [Compare("Password",ErrorMessage = "Passwords do not match. Try again")]
+        [MinLength(6)]
+        public string Password { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
+        [Compare("Password", ErrorMessage = "Passwords do not match. Try again")]
         public string ConfirmPassword { get; set; }
     }
 
-    public class loginViewModel {
-
+    public class LoginViewModel
+    {
         [Required]
         public string Username { get; set; }
 
         [Required]
         [DataType(DataType.Password)]
-        public String Password { get; set; }
+        public string Password { get; set; }
 
         public bool RememberMe { get; set; }
-    
     }
 }
