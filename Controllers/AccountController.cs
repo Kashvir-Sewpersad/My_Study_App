@@ -89,9 +89,10 @@ namespace My_Study_App.Controllers
             var principal = new ClaimsPrincipal(identity);
 
             await HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                principal,
-                new AuthenticationProperties { IsPersistent = model.RememberMe });
+    CookieAuthenticationDefaults.AuthenticationScheme,
+    principal,
+    new AuthenticationProperties { IsPersistent = false });
+
 
             return RedirectToAction("Index", "Home");
         }

@@ -1,0 +1,27 @@
+﻿@model List<My_Study_App.Models.StudyPlan>
+@{
+    ViewData["Title"] = "My Study Plans";
+}
+
+<h2>My Study Plans</h2>
+
+<a asp-action="Create" class="btn btn-primary mb-3">+ Create New Study Plan</a>
+
+@if (!Model.Any())
+{
+    <p>You haven't created any study plans yet.</p>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var plan in Model)
+        {
+            <a asp-action="Edit" asp-route-id="@plan.Id" class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between">
+                    <strong>@plan.Topic</strong>
+                    <small>@plan.Flashcards.Count card(s)</small>
+                </div>
+            </a>
+        }
+    </div>
+}

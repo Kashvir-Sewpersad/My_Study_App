@@ -1,0 +1,70 @@
+﻿@model My_Study_App.Models.StudyPlanEditViewModel
+@{
+    ViewData["Title"] = "Edit Study Plan";
+}
+
+<h2>@Model.Topic</h2>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+
+<h4>Topic & Notes</h4>
+<form asp-action="Edit" method="post" class="mb-4">
+    <input type="hidden" asp-for="Id" />
+    <div class="form-group mb-3">
+        <label asp-for="Topic" class="form-label">Topic</label>
+        <input asp-for="Topic" class="form-control" />
+        <span asp-validation-for="Topic" class="text-danger"></span>
+    </div>
+    <div class="form-group mb-3">
+        <label asp-for="Notes" class="form-label">Notes</label>
+        <textarea asp-for="Notes" class="form-control" rows="6"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Progress</button>
+</form>
+
+<hr />
+
+<h4>Flashcards (@Model.Flashcards.Count)</h4>
+
+@foreach (var card in Model.Flashcards)
+{
+    <div class="card mb-2">
+        <div class="card-body d-flex justify-content-between align-items-start">
+            <div>
+                <strong>Q:</strong> @card.Question<br />
+                <strong>A:</strong> @card.Answer
+            </div>
+            <form asp-action="DeleteFlashcard" method="post">
+                <input type="hidden" name="flashcardId" value="@card.Id" />
+                <input type="hidden" name="studyPlanId" value="@Model.Id" />
+                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+}
+
+<h5 class="mt-4">Add a Flashcard</h5>
+<form asp-action="AddFlashcard" method="post">
+    <input type="hidden" name="StudyPlanId" value="@Model.Id" />
+    <div class="form-group mb-2">
+        <label class="form-label">Question</label>
+        <input name="Question" class="form-control" required />
+    </div>
+    <div class="form-group mb-2">
+        <label class="form-label">Answer</label>
+        <input name="Answer" class="form-control" required />
+    </div>
+    <button type="submit" class="btn btn-secondary">Add Flashcard</button>
+</form>
+
+<hr />
+<a asp-action="Index" class="btn btn-link">← Back to My Study Plans</a>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -1,0 +1,30 @@
+﻿@model My_Study_App.Models.StudyPlanEditViewModel
+@{
+    ViewData["Title"] = "New Study Plan";
+}
+
+<h2>New Study Plan</h2>
+
+<form asp-action="Create" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="form-group mb-3">
+        <label asp-for="Topic" class="form-label">Topic</label>
+        <input asp-for="Topic" class="form-control" placeholder="e.g. Cellular Respiration" />
+        <span asp-validation-for="Topic" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label asp-for="Notes" class="form-label">Notes</label>
+        <textarea asp-for="Notes" class="form-control" rows="5"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create Plan</button>
+    <a asp-action="Index" class="btn btn-link">Cancel</a>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

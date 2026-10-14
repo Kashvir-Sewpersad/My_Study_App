@@ -1,7 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using My_Study_App.Models;
-using System.Collections.Generic;
-using System.Reflection.Emit;
 
 namespace My_Study_App.Data
 {
@@ -11,6 +9,8 @@ namespace My_Study_App.Data
             : base(options) { }
 
         public DbSet<User> Users { get; set; }
+        public DbSet<StudyPlan> StudyPlans { get; set; }
+        public DbSet<Flashcard> Flashcards { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -21,6 +21,12 @@ namespace My_Study_App.Data
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
+
+            modelBuilder.Entity<Flashcard>()
+                .HasOne(f => f.StudyPlan)
+                .WithMany(sp => sp.Flashcards)
+                .HasForeignKey(f => f.StudyPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
