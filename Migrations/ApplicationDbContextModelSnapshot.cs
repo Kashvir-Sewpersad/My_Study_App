@@ -75,6 +75,37 @@ namespace My_Study_App.Migrations
                     b.ToTable("StudyPlans");
                 });
 
+            modelBuilder.Entity("My_Study_App.Models.StudySession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ActiveSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("LoginTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "LoginTicks")
+                        .IsUnique();
+
+                    b.ToTable("StudySessions");
+                });
+
             modelBuilder.Entity("My_Study_App.Models.User", b =>
                 {
                     b.Property<int>("Id")

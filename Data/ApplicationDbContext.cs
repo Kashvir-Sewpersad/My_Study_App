@@ -11,6 +11,7 @@ namespace My_Study_App.Data
         public DbSet<User> Users { get; set; }
         public DbSet<StudyPlan> StudyPlans { get; set; }
         public DbSet<Flashcard> Flashcards { get; set; }
+        public DbSet<StudySession> StudySessions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -27,6 +28,10 @@ namespace My_Study_App.Data
                 .WithMany(sp => sp.Flashcards)
                 .HasForeignKey(f => f.StudyPlanId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<StudySession>()
+                .HasIndex(s => new { s.UserId, s.LoginTicks })
+                .IsUnique();
         }
     }
 }

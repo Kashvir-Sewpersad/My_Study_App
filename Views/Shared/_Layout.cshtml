@@ -55,9 +55,11 @@
 
     @if (User.Identity?.IsAuthenticated == true)
     {
+        @Html.AntiForgeryToken()
         <script>
             (function () {
                 const IDLE_MS = 15 * 60 * 1000;   // 15 minutes
+                const SAVE_EVERY_MS = 30 * 1000;  // save to DB every 30 seconds
                 const KEY = 'studyTimer';
                 const loginTime = '@User.FindFirst("LoginTime")?.Value';
 
@@ -65,12 +67,11 @@
                 const statusEl = document.getElementById('study-timer-status');
                 if (!display) return;
 
-                // Load saved state, or start fresh if this is a new login
                 let state = null;
                 try { state = JSON.parse(sessionStorage.getItem(KEY)); } catch (e) {}
                 const now = Date.now();
                 if (!state || state.loginTime !== loginTime) {
-                    state = { loginTime: loginTime, accumulated: 0, lastTick: now, lastActivity: now };
+                    state = { loginTime: loginTime, accumulated: 0, lastTick: now, lastActivity: now, lastSaved: 0 };
                 }
 
                 function save() {
@@ -87,7 +88,6 @@
 
                 function tick() {
                     const now = Date.now();
-                    // Only count time up to the moment the idle limit is reached
                     const activeUntil = Math.min(now, state.lastActivity + IDLE_MS);
                     if (activeUntil > state.lastTick) {
                         state.accumulated += activeUntil - state.lastTick;
@@ -101,8 +101,28 @@
                     save();
                 }
 
+                // Send the current total to the server (only if it changed since last save)
+                function saveToServer() {
+                    const seconds = Math.floor(state.accumulated / 1000);
+                    if (seconds === state.lastSaved) return;
+
+                    const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (!tokenInput) return;
+
+                    fetch('/StudyTime/Save', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': tokenInput.value
+                        },
+                        body: JSON.stringify({ activeSeconds: seconds }),
+                        keepalive: true   // lets the request finish even while the page is closing
+                    }).then(function (r) {
+                        if (r.ok) { state.lastSaved = seconds; save(); }
+                    }).catch(function () { /* try again at the next interval */ });
+                }
+
                 function onActivity() {
-                    // Settle the idle period first, then resume counting
                     tick();
                     state.lastActivity = Date.now();
                     state.lastTick = state.lastActivity;
@@ -112,10 +132,14 @@
                     document.addEventListener(evt, onActivity, { passive: true });
                 });
 
-                window.addEventListener('beforeunload', function () { tick(); });
+                window.addEventListener('beforeunload', function () { tick(); saveToServer(); });
+                document.addEventListener('visibilitychange', function () {
+                    if (document.visibilityState === 'hidden') { tick(); saveToServer(); }
+                });
 
                 tick();
                 setInterval(tick, 1000);
+                setInterval(saveToServer, SAVE_EVERY_MS);
             })();
         </script>
     }
