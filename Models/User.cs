@@ -1,5 +1,4 @@
-﻿
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace My_Study_App.Models
 {
@@ -12,10 +11,10 @@ namespace My_Study_App.Models
         public string Username { get; set; }
 
         [Required]
-        [MaxLength(50)]
+        [EmailAddress]
+        [MaxLength(100)]
         public string Email { get; set; }
 
-        [Required]
-        public string PasswordHash { get; set; }
+        public string? PasswordHash { get; set; }   // null for Google-only accounts
     }
 }

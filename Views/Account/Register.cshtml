@@ -1,6 +1,8 @@
 ﻿@model My_Study_App.Models.RegisterViewModel
+@inject IConfiguration Config
 @{
     ViewData["Title"] = "Register";
+    var googleEnabled = !string.IsNullOrEmpty(Config["Authentication:Google:ClientId"]);
 }
 
 <h2>Register</h2>
@@ -37,6 +39,16 @@
             <button type="submit" class="btn btn-primary">Register</button>
             <a asp-action="Login" class="btn btn-link">Already have an account?</a>
         </form>
+
+        @if (googleEnabled)
+        {
+            <hr />
+            <form asp-action="GoogleLogin" asp-controller="Account" method="post">
+                <button type="submit" class="btn btn-outline-secondary w-100">
+                    Sign up with Google
+                </button>
+            </form>
+        }
     </div>
 </div>
 

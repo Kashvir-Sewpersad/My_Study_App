@@ -1,6 +1,8 @@
 ﻿@model My_Study_App.Models.LoginViewModel
+@inject IConfiguration Config
 @{
     ViewData["Title"] = "Login";
+    var googleEnabled = !string.IsNullOrEmpty(Config["Authentication:Google:ClientId"]);
 }
 
 <h2>Login</h2>
@@ -22,14 +24,24 @@
                 <span asp-validation-for="Password" class="text-danger"></span>
             </div>
 
-            <div class="form-check mb-3">
-                <input asp-for="RememberMe" class="form-check-input" />
-                <label asp-for="RememberMe" class="form-check-label"></label>
-            </div>
-
             <button type="submit" class="btn btn-primary">Login</button>
             <a asp-action="Register" class="btn btn-link">Need an account?</a>
         </form>
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger mt-3">@TempData["Error"]</div>
+        }
+
+        @if (googleEnabled)
+        {
+            <hr />
+            <form asp-action="GoogleLogin" asp-controller="Account" method="post">
+                <button type="submit" class="btn btn-outline-secondary w-100">
+                    Sign in with Google
+                </button>
+            </form>
+        }
     </div>
 </div>
 

@@ -15,12 +15,30 @@ namespace My_Study_App
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/Account/Login";
-        options.AccessDeniedPath = "/Account/Login";
-    });
+            var authBuilder = builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            })
+                .AddCookie(options =>
+                {
+                    options.LoginPath = "/Account/Login";
+                    options.AccessDeniedPath = "/Account/Login";
+                })
+                .AddCookie("External");
+
+            var googleId = builder.Configuration["Authentication:Google:ClientId"];
+            var googleSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+
+            if (!string.IsNullOrEmpty(googleId) && !string.IsNullOrEmpty(googleSecret))
+            {
+                authBuilder.AddGoogle(options =>
+                {
+                    options.ClientId = googleId;
+                    options.ClientSecret = googleSecret;
+                    options.SignInScheme = "External";
+                });
+            }
 
             var app = builder.Build();
 
