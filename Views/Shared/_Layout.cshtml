@@ -33,6 +33,10 @@
                             Time studying: <strong id="study-timer">00:00:00</strong>
                             <small id="study-timer-status" class="ms-1"></small>
                         </span>
+
+                        <form id="end-session-form" asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">End Session</button>
+                        </form>
                     }
                 </div>
             </div>
@@ -74,6 +78,8 @@
                     state = { loginTime: loginTime, accumulated: 0, lastTick: now, lastActivity: now, lastSaved: 0 };
                 }
 
+                let ending = false;
+
                 function save() {
                     try { sessionStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
                 }
@@ -104,12 +110,12 @@
                 // Send the current total to the server (only if it changed since last save)
                 function saveToServer() {
                     const seconds = Math.floor(state.accumulated / 1000);
-                    if (seconds === state.lastSaved) return;
+                    if (seconds === state.lastSaved) return Promise.resolve();
 
                     const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-                    if (!tokenInput) return;
+                    if (!tokenInput) return Promise.resolve();
 
-                    fetch('/StudyTime/Save', {
+                    return fetch('/StudyTime/Save', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -132,9 +138,25 @@
                     document.addEventListener(evt, onActivity, { passive: true });
                 });
 
-                window.addEventListener('beforeunload', function () { tick(); saveToServer(); });
+                // End Session: save final time, clear local timer data, then log out
+                const endForm = document.getElementById('end-session-form');
+                if (endForm) {
+                    endForm.addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        ending = true;
+                        tick();
+                        saveToServer().finally(function () {
+                            try { sessionStorage.removeItem(KEY); } catch (err) {}
+                            endForm.submit();   // submit() skips this listener, so no loop
+                        });
+                    });
+                }
+
+                window.addEventListener('beforeunload', function () {
+                    if (!ending) { tick(); saveToServer(); }
+                });
                 document.addEventListener('visibilitychange', function () {
-                    if (document.visibilityState === 'hidden') { tick(); saveToServer(); }
+                    if (document.visibilityState === 'hidden' && !ending) { tick(); saveToServer(); }
                 });
 
                 tick();
