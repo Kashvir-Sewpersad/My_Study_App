@@ -22,6 +22,47 @@ namespace My_Study_App.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("My_Study_App.Models.CalendarEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("EventDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StartTime")
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)");
+
+                    b.Property<int?>("StudyPlanId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudyPlanId");
+
+                    b.HasIndex("UserId", "EventDate");
+
+                    b.ToTable("CalendarEvents");
+                });
+
             modelBuilder.Entity("My_Study_App.Models.Flashcard", b =>
                 {
                     b.Property<int>("Id")
@@ -46,6 +87,27 @@ namespace My_Study_App.Migrations
                     b.HasIndex("StudyPlanId");
 
                     b.ToTable("Flashcards");
+                });
+
+            modelBuilder.Entity("My_Study_App.Models.LoginRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("LoggedInAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "LoggedInAtUtc");
+
+                    b.ToTable("LoginRecords");
                 });
 
             modelBuilder.Entity("My_Study_App.Models.StudyPlan", b =>
@@ -136,6 +198,14 @@ namespace My_Study_App.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("My_Study_App.Models.CalendarEvent", b =>
+                {
+                    b.HasOne("My_Study_App.Models.StudyPlan", null)
+                        .WithMany()
+                        .HasForeignKey("StudyPlanId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("My_Study_App.Models.Flashcard", b =>

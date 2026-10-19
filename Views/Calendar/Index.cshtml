@@ -1,0 +1,355 @@
+﻿@{
+    ViewData["Title"] = "Calendar";
+}
+
+<style>
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-dow { text-align: center; font-weight: 600; font-size: .85rem; color: #6c757d; padding: 4px 0; }
+    .cal-day { min-height: 95px; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px;
+               cursor: pointer; background: #fff; overflow: hidden; position: relative; }
+    .cal-day:hover { border-color: #258cfb; }
+    .cal-day.other { background: #f8f9fa; color: #adb5bd; }
+    .cal-day.login-1, .legend-box.login-1 { background: #d1e7dd; }
+    .cal-day.login-2, .legend-box.login-2 { background: #a3cfbb; }
+    .cal-day.login-3, .legend-box.login-3 { background: #75b798; }
+    .cal-day.today { box-shadow: 0 0 0 2px #258cfb inset; }
+    .cal-day.selected { border: 2px solid #0d6efd; }
+    .cal-num { font-weight: 600; font-size: .9rem; }
+    .login-badge { position: absolute; top: 4px; right: 4px; font-size: .65rem; }
+    .cal-event { font-size: .72rem; background: #cfe2ff; color: #052c65; border-radius: 3px;
+                 padding: 1px 4px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cal-event.done { text-decoration: line-through; opacity: .6; }
+    .legend-box { display: inline-block; width: 14px; height: 14px; border: 1px solid #adb5bd;
+                  border-radius: 3px; vertical-align: middle; }
+</style>
+
+<h2 class="mb-3">Study Calendar</h2>
+
+<div class="row">
+    <div class="col-lg-8 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <button type="button" id="prev-month" class="btn btn-outline-secondary btn-sm">&laquo; Prev</button>
+            <h4 id="month-label" class="mb-0"></h4>
+            <div>
+                <button type="button" id="today-btn" class="btn btn-outline-primary btn-sm">Today</button>
+                <button type="button" id="next-month" class="btn btn-outline-secondary btn-sm">Next &raquo;</button>
+            </div>
+        </div>
+
+        <div id="summary" class="small text-muted mb-2"></div>
+
+        <div class="cal-grid" id="dow-row"></div>
+        <div class="cal-grid" id="day-grid"></div>
+
+        <div class="d-flex flex-wrap gap-3 small mt-3 align-items-center">
+            <span><span class="legend-box login-1"></span> 1 login</span>
+            <span><span class="legend-box login-2"></span> 2 logins</span>
+            <span><span class="legend-box login-3"></span> 3+ logins</span>
+            <span><span class="cal-event d-inline-block">Planned</span></span>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 id="day-title"></h5>
+                <div id="day-logins" class="small text-muted mb-3"></div>
+
+                <h6>Planned for this day</h6>
+                <div id="day-events" class="mb-3"></div>
+
+                <hr />
+                <h6>Add a plan</h6>
+                <div class="mb-2">
+                    <input id="ev-title" class="form-control" maxlength="150" placeholder="e.g. Revise chapter 4" />
+                </div>
+                <div class="mb-2">
+                    <input id="ev-time" type="time" class="form-control" />
+                </div>
+                <div class="mb-2">
+                    <select id="ev-plan" class="form-select">
+                        <option value="">No study plan linked</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <textarea id="ev-notes" class="form-control" rows="2" placeholder="Notes (optional)"></textarea>
+                </div>
+                <button type="button" id="ev-add" class="btn btn-primary btn-sm">Add to calendar</button>
+                <div id="ev-error" class="text-danger small mt-2"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+                            'July', 'August', 'September', 'October', 'November', 'December'];
+            const DOWS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+            let viewDate = new Date();
+            viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+            let selectedKey = keyOf(new Date());
+            let data = { logins: [], events: [], plans: [], totalLogins: 0 };
+
+            function pad(n) { return String(n).padStart(2, '0'); }
+            function keyOf(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+            function parseKey(k) { const p = k.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+
+            function el(tag, cls, text) {
+                const e = document.createElement(tag);
+                if (cls) e.className = cls;
+                if (text !== undefined && text !== null) e.textContent = text;
+                return e;
+            }
+
+            function token() {
+                const i = document.querySelector('input[name="__RequestVerificationToken"]');
+                return i ? i.value : '';
+            }
+
+            async function post(url, body) {
+                const opts = { method: 'POST', headers: { 'RequestVerificationToken': token() } };
+                if (body) {
+                    opts.headers['Content-Type'] = 'application/json';
+                    opts.body = JSON.stringify(body);
+                }
+                return fetch(url, opts);
+            }
+
+            // Group logins by the user's LOCAL calendar day
+            function loginsByDay() {
+                const map = {};
+                data.logins.forEach(function (iso) {
+                    const d = new Date(iso);
+                    const k = keyOf(d);
+                    (map[k] = map[k] || []).push(d);
+                });
+                return map;
+            }
+
+            function eventsByDay() {
+                const map = {};
+                data.events.forEach(function (ev) {
+                    (map[ev.eventDate] = map[ev.eventDate] || []).push(ev);
+                });
+                return map;
+            }
+
+            async function load() {
+                const res = await fetch('/Calendar/Data?year=' + viewDate.getFullYear() +
+                                        '&month=' + (viewDate.getMonth() + 1));
+                if (!res.ok) return;
+                data = await res.json();
+                render();
+            }
+
+            function render() {
+                const y = viewDate.getFullYear();
+                const m = viewDate.getMonth();
+                document.getElementById('month-label').textContent = MONTHS[m] + ' ' + y;
+
+                const loginMap = loginsByDay();
+                const eventMap = eventsByDay();
+                const todayK = keyOf(new Date());
+
+                const offset = new Date(y, m, 1).getDay();
+                const daysInMonth = new Date(y, m + 1, 0).getDate();
+                const rows = Math.ceil((offset + daysInMonth) / 7);
+
+                const grid = document.getElementById('day-grid');
+                grid.innerHTML = '';
+
+                for (let i = 0; i < rows * 7; i++) {
+                    const d = new Date(y, m, 1 - offset + i);
+                    const k = keyOf(d);
+                    const logins = loginMap[k] || [];
+                    const evs = eventMap[k] || [];
+
+                    let cls = 'cal-day';
+                    if (d.getMonth() !== m) cls += ' other';
+                    if (k === todayK) cls += ' today';
+                    if (k === selectedKey) cls += ' selected';
+                    if (logins.length > 0) cls += ' login-' + Math.min(logins.length, 3);
+
+                    const cell = el('div', cls);
+                    cell.appendChild(el('span', 'cal-num', String(d.getDate())));
+
+                    if (logins.length > 0) {
+                        const badge = el('span', 'badge bg-success login-badge', logins.length + '\u00d7');
+                        badge.title = logins.length + (logins.length === 1 ? ' login' : ' logins');
+                        cell.appendChild(badge);
+                    }
+
+                    evs.slice(0, 2).forEach(function (ev) {
+                        cell.appendChild(el('div', 'cal-event' + (ev.isCompleted ? ' done' : ''), ev.title));
+                    });
+                    if (evs.length > 2) {
+                        cell.appendChild(el('div', 'small text-muted', '+' + (evs.length - 2) + ' more'));
+                    }
+
+                    cell.addEventListener('click', function () {
+                        selectedKey = k;
+                        if (d.getMonth() !== m) {
+                            viewDate = new Date(d.getFullYear(), d.getMonth(), 1);
+                            load();
+                        } else {
+                            render();
+                        }
+                    });
+
+                    grid.appendChild(cell);
+                }
+
+                // Month summary
+                let daysLoggedIn = 0, loginsThisMonth = 0, planned = 0, done = 0;
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const k = keyOf(new Date(y, m, day));
+                    const n = (loginMap[k] || []).length;
+                    if (n > 0) daysLoggedIn++;
+                    loginsThisMonth += n;
+                    (eventMap[k] || []).forEach(function (ev) {
+                        planned++;
+                        if (ev.isCompleted) done++;
+                    });
+                }
+                document.getElementById('summary').textContent =
+                    'This month: ' + daysLoggedIn + ' day(s) logged in, ' + loginsThisMonth +
+                    ' login(s), ' + done + '/' + planned + ' plans completed. ' +
+                    'All-time logins: ' + data.totalLogins + '.';
+
+                renderDay(loginMap, eventMap);
+                renderPlanOptions();
+            }
+
+            function renderDay(loginMap, eventMap) {
+                document.getElementById('day-title').textContent =
+                    parseKey(selectedKey).toLocaleDateString(undefined,
+                        { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+                const logins = loginMap[selectedKey] || [];
+                const loginEl = document.getElementById('day-logins');
+                if (logins.length === 0) {
+                    loginEl.textContent = 'No logins on this day.';
+                } else {
+                    const times = logins.map(function (d) {
+                        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    });
+                    loginEl.textContent = 'Logged in ' + logins.length +
+                        (logins.length === 1 ? ' time: ' : ' times: ') + times.join(', ');
+                }
+
+                const list = document.getElementById('day-events');
+                list.innerHTML = '';
+                const evs = eventMap[selectedKey] || [];
+                if (evs.length === 0) {
+                    list.appendChild(el('div', 'small text-muted', 'Nothing planned yet.'));
+                    return;
+                }
+
+                evs.forEach(function (ev) {
+                    const row = el('div', 'border rounded p-2 mb-2');
+                    const top = el('div', 'd-flex justify-content-between align-items-start');
+
+                    const left = el('div');
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.className = 'form-check-input me-2';
+                    cb.checked = ev.isCompleted;
+                    cb.addEventListener('change', async function () {
+                        await post('/Calendar/ToggleComplete?id=' + ev.id);
+                        load();
+                    });
+                    left.appendChild(cb);
+                    left.appendChild(el('span', ev.isCompleted ? 'text-decoration-line-through text-muted' : '',
+                        (ev.startTime ? ev.startTime + ' - ' : '') + ev.title));
+                    top.appendChild(left);
+
+                    const del = el('button', 'btn btn-sm btn-outline-danger ms-2', 'Delete');
+                    del.type = 'button';
+                    del.addEventListener('click', async function () {
+                        if (!confirm('Delete this plan?')) return;
+                        await post('/Calendar/DeleteEvent?id=' + ev.id);
+                        load();
+                    });
+                    top.appendChild(del);
+                    row.appendChild(top);
+
+                    const plan = data.plans.find(function (p) { return p.id === ev.studyPlanId; });
+                    if (plan) {
+                        const link = el('a', 'small d-block mt-1', 'Study plan: ' + plan.topic);
+                        link.href = '/StudyPlan/Edit/' + plan.id;
+                        row.appendChild(link);
+                    }
+                    if (ev.notes) row.appendChild(el('div', 'small text-muted mt-1', ev.notes));
+
+                    list.appendChild(row);
+                });
+            }
+
+            function renderPlanOptions() {
+                const select = document.getElementById('ev-plan');
+                const current = select.value;
+                select.innerHTML = '';
+                const none = el('option', '', 'No study plan linked');
+                none.value = '';
+                select.appendChild(none);
+                data.plans.forEach(function (p) {
+                    const o = el('option', '', p.topic);
+                    o.value = p.id;
+                    select.appendChild(o);
+                });
+                select.value = current;
+            }
+
+            function showError(msg) { document.getElementById('ev-error').textContent = msg || ''; }
+
+            document.getElementById('ev-add').addEventListener('click', async function () {
+                showError('');
+                const title = document.getElementById('ev-title').value.trim();
+                if (!title) { showError('Please enter a title.'); return; }
+
+                const planVal = document.getElementById('ev-plan').value;
+                const res = await post('/Calendar/AddEvent', {
+                    title: title,
+                    date: selectedKey,
+                    startTime: document.getElementById('ev-time').value || null,
+                    notes: document.getElementById('ev-notes').value,
+                    studyPlanId: planVal ? parseInt(planVal, 10) : null
+                });
+
+                if (!res.ok) {
+                    showError((await res.text()) || 'Could not save. Please try again.');
+                    return;
+                }
+
+                document.getElementById('ev-title').value = '';
+                document.getElementById('ev-time').value = '';
+                document.getElementById('ev-notes').value = '';
+                document.getElementById('ev-plan').value = '';
+                load();
+            });
+
+            document.getElementById('prev-month').addEventListener('click', function () {
+                viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
+                load();
+            });
+            document.getElementById('next-month').addEventListener('click', function () {
+                viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
+                load();
+            });
+            document.getElementById('today-btn').addEventListener('click', function () {
+                const now = new Date();
+                viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                selectedKey = keyOf(now);
+                load();
+            });
+
+            const dowRow = document.getElementById('dow-row');
+            DOWS.forEach(function (n) { dowRow.appendChild(el('div', 'cal-dow', n)); });
+
+            load();
+        })();
+    </script>
+}

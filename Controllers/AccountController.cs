@@ -144,15 +144,22 @@ namespace My_Study_App.Controllers
             return RedirectToAction("Login", "Account");
         }
 
-        // Shared by password login and Google login
         private async Task SignInUserAsync(User user)
         {
-            var claims = new List<Claim>
+            // Record this login for the calendar
+            _context.LoginRecords.Add(new LoginRecord
             {
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim("LoginTime", DateTime.UtcNow.Ticks.ToString())
-            };
+                UserId = user.Id,
+                LoggedInAtUtc = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
+            var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.Name, user.Username),
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim("LoginTime", DateTime.UtcNow.Ticks.ToString())
+    };
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
