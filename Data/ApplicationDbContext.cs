@@ -14,6 +14,7 @@ namespace My_Study_App.Data
         public DbSet<StudySession> StudySessions { get; set; }
         public DbSet<LoginRecord> LoginRecords { get; set; }
         public DbSet<CalendarEvent> CalendarEvents { get; set; }
+        public DbSet<MusicPlaylist> MusicPlaylists { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -47,6 +48,9 @@ namespace My_Study_App.Data
                 .WithMany()
                 .HasForeignKey(e => e.StudyPlanId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<MusicPlaylist>()
+                .HasIndex(m => m.UserId);
         }
     }
 }

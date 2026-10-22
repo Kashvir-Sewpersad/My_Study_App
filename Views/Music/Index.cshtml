@@ -1,0 +1,110 @@
+﻿@model List<My_Study_App.Models.MusicPlaylist>
+@{
+    ViewData["Title"] = "Study Music";
+}
+
+<h2 class="mb-3">Study Music</h2>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="row">
+    <div class="col-lg-5 mb-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5>Add a playlist</h5>
+                <form asp-action="Add" method="post">
+                    <div class="mb-2">
+                        <input name="name" class="form-control" maxlength="100" placeholder="Name, e.g. Lo-fi focus" required />
+                    </div>
+                    <div class="mb-2">
+                        <input name="url" class="form-control" maxlength="500"
+                               placeholder="Paste a YouTube, Spotify or SoundCloud link" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                </form>
+                <div class="small text-muted mt-2">
+                    Works with playlists, albums, tracks and videos.
+                </div>
+            </div>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <p class="text-muted">No playlists saved yet.</p>
+        }
+
+        @foreach (var item in Model)
+        {
+            <div class="card mb-2">
+                <div class="card-body d-flex justify-content-between align-items-center py-2">
+                    <div>
+                        <strong>@item.Name</strong>
+                        <span class="badge bg-secondary ms-1">@item.Provider</span>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-success play-btn"
+                                data-embed="@item.EmbedUrl" data-provider="@item.Provider">
+                            Play
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary popout-btn"
+                                data-id="@item.Id">
+                            Pop out
+                        </button>
+                        <form asp-action="Delete" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-7">
+        <div id="player-box" class="card">
+            <div class="card-body">
+                <div id="player-placeholder" class="text-muted">
+                    Pick a playlist and press <strong>Play</strong>.
+                </div>
+                <iframe id="player-frame" class="d-none w-100 border-0 rounded"
+                        allow="autoplay; encrypted-media; clipboard-write; fullscreen; picture-in-picture"
+                        loading="lazy"></iframe>
+                <div class="small text-muted mt-3">
+                    The player stops if you leave this page. Use <strong>Pop out</strong> to keep music
+                    playing in a small window while you study.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const frame = document.getElementById('player-frame');
+            const placeholder = document.getElementById('player-placeholder');
+
+            document.querySelectorAll('.play-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    frame.src = btn.dataset.embed;
+                    frame.style.height = btn.dataset.provider === 'Spotify' ? '352px' : '380px';
+                    frame.classList.remove('d-none');
+                    placeholder.classList.add('d-none');
+                });
+            });
+
+            document.querySelectorAll('.popout-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    // Reusing the window name replaces the current song instead of opening many windows
+                    window.open('/Music/Player/' + btn.dataset.id, 'studyMusicPlayer',
+                                'width=440,height=460,resizable=yes');
+                    // Stop the in-page player so two things don't play at once
+                    frame.src = 'about:blank';
+                });
+            });
+        })();
+    </script>
+}

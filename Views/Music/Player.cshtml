@@ -1,0 +1,39 @@
+﻿@model My_Study_App.Models.MusicPlaylist
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@Model.Name - Study Music</title>
+    <style>
+        html, body {
+            margin: 0;
+            height: 100%;
+            font-family: system-ui, sans-serif;
+            background: #f8f9fa;
+        }
+
+        .bar {
+            padding: 8px 12px;
+            font-size: .9rem;
+            border-bottom: 1px solid #dee2e6;
+            background: #fff;
+        }
+
+        iframe {
+            width: 100%;
+            height: calc(100% - 38px);
+            border: 0;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="bar">@Model.Name <small>(@Model.Provider)</small></div>
+    <iframe src="@Model.EmbedUrl"
+            allow="autoplay; encrypted-media; clipboard-write; fullscreen; picture-in-picture"></iframe>
+</body>
+</html>
